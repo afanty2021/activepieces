@@ -462,3 +462,6 @@ Not into coding but still interested in contributing? Come join our [Discord](ht
 
 This project follows the [all-contributors](https://allcontributors.org) specification.
 Contributions of any kind are welcome!
+
+
+[![ReadmeX](https://raw.githubusercontent.com/CodePhiliaX/resource-trusteeship/main/readmex.svg)](https://readmex.com/activepieces/activepieces)
