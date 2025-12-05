@@ -1,18 +1,16 @@
-import { ProjectPlanLimits, RESOURCE_TO_MESSAGE_MAPPING } from '@activepieces/ee-shared'
+import { ProjectPlanLimits } from '@activepieces/ee-shared'
 import { exceptionHandler } from '@activepieces/server-shared'
 import {
-    ActivepiecesError,
     AiOverageState,
     ApEdition,
     apId,
-    ErrorCode,
     isNil,
     PiecesFilterType,
     PlatformPlan,
-    PlatformUsageMetric,
     ProjectPlan,
     spreadIfDefined,
     spreadIfNotUndefined,
+    TeamProjectsLimit,
 } from '@activepieces/shared'
 import { FastifyBaseLogger } from 'fastify'
 import { repoFactory } from '../../../core/db/repo-factory'
@@ -75,7 +73,7 @@ export const projectLimitsService = (log: FastifyBaseLogger) => ({
             return false
         }
 
-        const projectPlan = await this.ensureProjectUnlockedAndGetPlatformPlan(projectId)
+        const projectPlan = await projectLimitsService(system.globalLogger()).getOrCreateDefaultPlan(projectId)
 
         try {
             const platformId = await projectService.getPlatformId(projectId)
@@ -86,7 +84,7 @@ export const projectLimitsService = (log: FastifyBaseLogger) => ({
             const platformAICreditUsage = await platformUsageService(log).getPlatformUsage({ platformId, metric: 'ai_credits', startDate, endDate }) + requestCostBeforeFiring
 
             const aiCreditPlatformLimit = await platformReachedLimit({ platformPlan, platformUsage: platformAICreditUsage, log })
-            const aiCreditPorjectLimit = await projectReachedLimit({ projectPlan, manageProjectsEnabled: platformPlan.manageProjectsEnabled, projectUsage: projectAICreditUsage, log })
+            const aiCreditPorjectLimit = await projectReachedLimit({ projectPlan, teamProjectsLimit: platformPlan.teamProjectsLimit, projectUsage: projectAICreditUsage, log })
 
             return aiCreditPlatformLimit || aiCreditPorjectLimit
         }
@@ -95,27 +93,11 @@ export const projectLimitsService = (log: FastifyBaseLogger) => ({
             return false
         }
     },
-
-    async ensureProjectUnlockedAndGetPlatformPlan(projectId: string): Promise<ProjectPlan> {
-        const projectPlan = await projectLimitsService(system.globalLogger()).getOrCreateDefaultPlan(projectId)
-
-        if (projectPlan.locked) {
-            throw new ActivepiecesError({
-                code: ErrorCode.RESOURCE_LOCKED,
-                params: {
-                    message: RESOURCE_TO_MESSAGE_MAPPING[PlatformUsageMetric.PROJECTS],
-                },
-            })
-        }
-
-        return projectPlan
-    },
-
 })
 
 async function projectReachedLimit(params: LimitReachedFromProjectPlanParams): Promise<boolean> {
-    const { manageProjectsEnabled, projectPlan, projectUsage } = params
-    if (!manageProjectsEnabled) {
+    const { teamProjectsLimit, projectPlan, projectUsage } = params
+    if (teamProjectsLimit === TeamProjectsLimit.NONE) {
         return false
     }
     const projectLimit = projectPlan.aiCredits
@@ -158,7 +140,7 @@ function getProjectLimits(projectPlan: ProjectPlan, platformPlan: PlatformPlan):
 
     const aiCreditsLimit = (isOverageEnabled ? (platformPlan.aiCreditsOverageLimit ?? 0) : 0) + platformPlan.includedAiCredits
 
-    if (!platformPlan.manageProjectsEnabled) {
+    if (platformPlan.teamProjectsLimit === TeamProjectsLimit.NONE) {
         return {
             aiCredits: aiCreditsLimit,
         }
@@ -172,7 +154,7 @@ function getProjectLimits(projectPlan: ProjectPlan, platformPlan: PlatformPlan):
 
 type LimitReachedFromProjectPlanParams = {
     projectPlan: ProjectPlan
-    manageProjectsEnabled: boolean
+    teamProjectsLimit: TeamProjectsLimit
     log: FastifyBaseLogger
     projectUsage: number
 }

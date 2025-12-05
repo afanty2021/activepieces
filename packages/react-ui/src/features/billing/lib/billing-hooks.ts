@@ -1,15 +1,16 @@
 import { QueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-import { toast } from '@/components/ui/use-toast';
+import { internalErrorToast } from '@/components/ui/sonner';
 import { api } from '@/lib/api';
 import { ListAICreditsUsageRequest } from '@activepieces/common-ai';
 import {
-  CreateSubscriptionParams,
   ToggleAiCreditsOverageEnabledParams,
   SetAiCreditsOverageLimitParams,
-  UpdateSubscriptionParams,
+  UpdateActiveFlowsAddonParams,
+  CreateSubscriptionParams,
 } from '@activepieces/ee-shared';
 import { ApErrorParams, ErrorCode } from '@activepieces/shared';
 
@@ -31,17 +32,16 @@ export const billingMutations = {
       },
     });
   },
-  useUpdateSubscription: (setIsOpen: (isOpen: boolean) => void) => {
+  useUpdateActiveFlowsLimit: (setIsOpen?: (isOpen: boolean) => void) => {
     const navigate = useNavigate();
     return useMutation({
-      mutationFn: (params: UpdateSubscriptionParams) =>
-        platformBillingApi.updateSubscription(params),
+      mutationFn: (params: UpdateActiveFlowsAddonParams) =>
+        platformBillingApi.updateActiveFlowsLimits(params),
       onSuccess: (url) => {
-        setIsOpen(false);
+        setIsOpen?.(false);
         navigate(url);
-        toast({
-          title: t('Success'),
-          description: t('Plan updated successfully'),
+        toast.success(t('Plan updated successfully'), {
+          duration: 3000,
         });
       },
       onError: () => {
@@ -49,7 +49,7 @@ export const billingMutations = {
       },
     });
   },
-  useCreateSubscription: (setIsOpen: (isOpen: boolean) => void) => {
+  useCreateSubscription: (setIsOpen?: (isOpen: boolean) => void) => {
     return useMutation({
       mutationFn: async (params: CreateSubscriptionParams) => {
         const checkoutSessionURl = await platformBillingApi.createSubscription(
@@ -58,18 +58,12 @@ export const billingMutations = {
         window.open(checkoutSessionURl, '_blank');
       },
       onSuccess: () => {
-        setIsOpen(false);
-        toast({
-          title: t('Success'),
-          description: t('Plan created successfully'),
-        });
+        setIsOpen?.(false);
       },
       onError: (error) => {
-        toast({
-          title: t('Creating Subscription failed'),
+        toast.error(t('Starting Subscription failed'), {
           description: t(error.message),
-          variant: 'default',
-          duration: 5000,
+          duration: 3000,
         });
       },
     });
@@ -82,30 +76,22 @@ export const billingMutations = {
         queryClient.invalidateQueries({
           queryKey: billingKeys.platformSubscription(data.platformId),
         });
-        toast({
-          title: t('Success'),
-          description: t('AI credit usage limit set successfully'),
+        toast.success(t('AI credit usage limit updated successfully'), {
+          duration: 3000,
         });
       },
       onError: (error) => {
         if (api.isError(error)) {
           const apError = error.response?.data as ApErrorParams;
           if (apError.code === ErrorCode.VALIDATION) {
-            toast({
-              title: t('Setting AI credit usage limit failed'),
+            toast.error(t('Setting AI credit usage limit failed'), {
               description: t(apError.params.message),
-              variant: 'default',
-              duration: 5000,
+              duration: 3000,
             });
             return;
           }
         }
-        toast({
-          title: t('Setting AI credit usage limit failed'),
-          description: t(error.message),
-          variant: 'default',
-          duration: 5000,
-        });
+        internalErrorToast();
       },
     });
   },
@@ -117,30 +103,20 @@ export const billingMutations = {
         queryClient.invalidateQueries({
           queryKey: billingKeys.platformSubscription(data.platformId),
         });
-        toast({
-          title: t('Success'),
-          description: t(`AI credits overage updated successfully`),
-        });
+        toast.success(t('AI credits overage updated successfully'), {});
       },
       onError: (error) => {
         if (api.isError(error)) {
           const apError = error.response?.data as ApErrorParams;
           if (apError.code === ErrorCode.VALIDATION) {
-            toast({
-              title: t('Setting AI credit usage limit failed'),
+            toast.error(t('Setting AI credit usage limit failed'), {
               description: t(apError.params.message),
-              variant: 'default',
-              duration: 5000,
+              duration: 3000,
             });
             return;
           }
         }
-        toast({
-          title: t('Setting AI credit usage limit failed'),
-          description: t(error.message),
-          variant: 'default',
-          duration: 5000,
-        });
+        internalErrorToast();
       },
     });
   },

@@ -6,7 +6,7 @@ import { Type } from '@sinclair/typebox'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { StatusCodes } from 'http-status-codes'
 import { system } from '../../../helper/system/system'
-import { pieceMetadataService } from '../../../pieces/piece-metadata-service'
+import { pieceMetadataService } from '../../../pieces/metadata/piece-metadata-service'
 import { dedicatedWorkers } from '../platform-plan/platform-dedicated-workers'
 import { adminPlatformService } from './admin-platform.service'
 
@@ -19,7 +19,7 @@ async function checkCertainKeyPreHandler(
 ): Promise<void> {
 
     const key = req.headers[API_KEY_HEADER] as string | undefined
-    if (key === API_KEY || isNil(API_KEY)) {
+    if (key !== API_KEY || isNil(API_KEY)) {
         await res.status(StatusCodes.FORBIDDEN).send({ message: 'Forbidden' })
         throw new Error('Forbidden')
     }

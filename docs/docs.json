@@ -345,16 +345,6 @@
                 ]
               },
               {
-                "group": "MCP Servers",
-                "icon": "server",
-                "pages": [
-                  "endpoints/mcp-servers/schema",
-                  "endpoints/mcp-servers/list",
-                  "endpoints/mcp-servers/rotate",
-                  "endpoints/mcp-servers/update"
-                ]
-              },
-              {
                 "group": "Queue Metrics",
                 "icon": "gauge-high",
                 "pages": [
@@ -381,6 +371,7 @@
                   "install/options/easypanel",
                   "install/options/aws",
                   "install/options/gcp",
+                  "install/options/railway",
                   "install/options/elestio"
                 ]
               }

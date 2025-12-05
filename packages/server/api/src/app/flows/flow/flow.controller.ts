@@ -12,7 +12,6 @@ import {
     flowStructureUtil,
     FlowTemplateWithoutProjectInformation,
     FlowTrigger,
-    FlowVersionState,
     GetFlowQueryParamsRequest,
     GetFlowTemplateRequestQuery,
     isNil,
@@ -33,10 +32,10 @@ import { StatusCodes } from 'http-status-codes'
 import { authenticationUtils } from '../../authentication/authentication-utils'
 import { entitiesMustBeOwnedByCurrentProject } from '../../authentication/authorization'
 import { assertUserHasPermissionToFlow } from '../../ee/authentication/project-role/rbac-middleware'
-import { PlatformPlanHelper } from '../../ee/platform/platform-plan/platform-plan-helper'
+import { platformPlanService } from '../../ee/platform/platform-plan/platform-plan.service'
 import { gitRepoService } from '../../ee/projects/project-release/git-sync/git-sync.service'
 import { eventsHooks } from '../../helper/application-events'
-import { flowMigrations } from '../flow-version/migrations'
+import { migrateFlowVersionTemplate } from '../flow-version/migrations'
 import { flowService } from './flow.service'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -73,35 +72,14 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
                 id: ApId,
             }),
         },
-        preValidation: (request, _, done) => {
+        preValidation: async (request) => {
             if (request.body?.type === FlowOperationType.IMPORT_FLOW) {
-                flowMigrations.apply({
-                    agentIds: [],
-                    connectionIds: [],
-                    created: new Date().toISOString(),
-                    displayName: '',
-                    flowId: '',
-                    id: '',
-                    updated: new Date().toISOString(),
-                    updatedBy: '',
-                    valid: false,
-                    trigger: request.body.request.trigger,
-                    state: FlowVersionState.DRAFT,
-                    schemaVersion: request.body.request.schemaVersion,
-                }).then((migratedFlowVersion) => {
-                    request.body.request = {
-                        ...request.body.request,
-                        trigger: migratedFlowVersion.trigger,
-                        schemaVersion: migratedFlowVersion.schemaVersion,
-                    }
-                    done()
-                }).catch((error) => {
-                    request.log.error(error)
-               
-                })
-            }
-            else {
-                done()
+                const migratedFlowTemplate = await migrateFlowVersionTemplate(request.body.request.trigger, request.body.request.schemaVersion)
+                request.body.request = {
+                    ...request.body.request,
+                    trigger: migratedFlowTemplate.trigger,
+                    schemaVersion: migratedFlowTemplate.schemaVersion,
+                }
             }
         },
     }, async (request) => {
@@ -116,20 +94,12 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
         const turnOnFlow = request.body.type === FlowOperationType.CHANGE_STATUS && request.body.request.status === FlowStatus.ENABLED
         const publishDisabledFlow = request.body.type === FlowOperationType.LOCK_AND_PUBLISH && flow.status === FlowStatus.DISABLED
         if (turnOnFlow || publishDisabledFlow) {
-            await PlatformPlanHelper.checkQuotaOrThrow({
-                platformId: request.principal.platform.id,
-                projectId: request.principal.projectId,
-                metric: PlatformUsageMetric.ACTIVE_FLOWS,
-            })
+            await platformPlanService(request.log).checkActiveFlowsExceededLimit(
+                request.principal.platform.id,
+                PlatformUsageMetric.ACTIVE_FLOWS,
+            )
         }
         await assertThatFlowIsNotBeingUsed(flow, userId)
-        eventsHooks.get(request.log).sendUserEventFromRequest(request, {
-            action: ApplicationEventName.FLOW_UPDATED,
-            data: {
-                request: request.body,
-                flowVersion: flow.version,
-            },
-        })
         const updatedFlow = await flowService(request.log).update({
             id: request.params.id,
             userId: request.principal.type === PrincipalType.SERVICE ? null : userId,
@@ -137,13 +107,19 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
             projectId: request.principal.projectId,
             operation: cleanOperation(request.body),
         })
-
+        eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+            action: ApplicationEventName.FLOW_UPDATED,
+            data: {
+                request: request.body,
+                flowVersion: flow.version,
+            },
+        })
         return updatedFlow
     })
 
     app.get('/', ListFlowsRequestOptions, async (request) => {
         return flowService(request.log).list({
-            projectId: request.principal.projectId,
+            projectIds: [request.principal.projectId],
             folderId: request.query.folderId,
             cursorRequest: request.query.cursor ?? null,
             limit: request.query.limit ?? DEFAULT_PAGE_SIZE,
@@ -184,13 +160,6 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
             id: request.params.id,
             projectId: request.principal.projectId,
         })
-        eventsHooks.get(request.log).sendUserEventFromRequest(request, {
-            action: ApplicationEventName.FLOW_DELETED,
-            data: {
-                flow,
-                flowVersion: flow.version,
-            },
-        })
         await gitRepoService(request.log).onDeleted({
             type: GitPushOperationType.DELETE_FLOW,
             externalId: flow.externalId,
@@ -202,6 +171,13 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
         await flowService(request.log).delete({
             id: request.params.id,
             projectId: request.principal.projectId,
+        })
+        eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+            action: ApplicationEventName.FLOW_DELETED,
+            data: {
+                flow,
+                flowVersion: flow.version,
+            },
         })
         return reply.status(StatusCodes.NO_CONTENT).send()
     })

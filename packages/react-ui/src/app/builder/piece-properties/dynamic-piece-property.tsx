@@ -8,7 +8,11 @@ import { SkeletonList } from '@/components/ui/skeleton';
 import { formUtils } from '@/features/pieces/lib/form-utils';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { PiecePropertyMap, PropertyType } from '@activepieces/pieces-framework';
-import { FlowAction, FlowTrigger } from '@activepieces/shared';
+import {
+  FlowAction,
+  FlowTrigger,
+  PropertyExecutionType,
+} from '@activepieces/shared';
 
 import { useStepSettingsContext } from '../step-settings/step-settings-context';
 
@@ -120,7 +124,7 @@ const DynamicPropertiesImplementation = React.memo(
             const currentValue = form.getValues(
               `settings.input.${props.propertyName}`,
             );
-            const defaultValue = formUtils.getDefaultValueForStep({
+            const defaultValue = formUtils.getDefaultValueForProperties({
               props: response.options,
               existingInput: currentValue ?? {},
               propertySettings:
@@ -137,6 +141,19 @@ const DynamicPropertiesImplementation = React.memo(
             );
 
             if (!readonly) {
+              // previously the schema didn't have this property, so we need to set it
+              // we can't always set it to MANUAL, because some sub properties might be dynamic and have the same name as the dynamic property
+              // which will override the sub property exectuion type
+              if (
+                !form.getValues().settings?.propertySettings?.[
+                  props.propertyName
+                ]
+              ) {
+                form.setValue(
+                  `settings.propertySettings.${props.propertyName}.type`,
+                  PropertyExecutionType.MANUAL as unknown,
+                );
+              }
               form.setValue(
                 `settings.propertySettings.${props.propertyName}.schema`,
                 schemaWithoutDropdownOptions,

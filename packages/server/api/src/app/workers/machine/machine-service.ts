@@ -7,7 +7,9 @@ import {
     WorkerMachineWithStatus,
     WorkerSettingsResponse,
 } from '@activepieces/shared'
+
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { FastifyBaseLogger } from 'fastify'
 import { Socket } from 'socket.io'
 import { In } from 'typeorm'
@@ -19,6 +21,7 @@ import { jwtUtils } from '../../helper/jwt-utils'
 import { system } from '../../helper/system/system'
 import { WorkerMachineEntity } from './machine-entity'
 
+dayjs.extend(utc)
 const workerRepo = repoFactory(WorkerMachineEntity)
 
 export const machineService = (_log: FastifyBaseLogger) => {
@@ -48,7 +51,6 @@ export const machineService = (_log: FastifyBaseLogger) => {
                 MAX_FILE_SIZE_MB: system.getNumberOrThrow(AppSystemProp.MAX_FILE_SIZE_MB),
                 SANDBOX_MEMORY_LIMIT: system.getOrThrow(AppSystemProp.SANDBOX_MEMORY_LIMIT),
                 SANDBOX_PROPAGATED_ENV_VARS: system.get(AppSystemProp.SANDBOX_PROPAGATED_ENV_VARS)?.split(',').map(f => f.trim()) ?? [],
-                PIECES_SOURCE: system.getOrThrow(AppSystemProp.PIECES_SOURCE),
                 DEV_PIECES: system.get(AppSystemProp.DEV_PIECES)?.split(',') ?? [],
                 SENTRY_DSN: system.get(AppSystemProp.SENTRY_DSN),
                 LOKI_PASSWORD: system.get(AppSystemProp.LOKI_PASSWORD),
@@ -74,6 +76,8 @@ export const machineService = (_log: FastifyBaseLogger) => {
                 REDIS_SENTINEL_ROLE: system.get(AppSystemProp.REDIS_SENTINEL_ROLE),
                 REDIS_SENTINEL_HOSTS: system.get(AppSystemProp.REDIS_SENTINEL_HOSTS),
                 REDIS_SENTINEL_NAME: system.get(AppSystemProp.REDIS_SENTINEL_NAME),
+                REDIS_FAILED_JOB_RETENTION_DAYS: system.getNumberOrThrow(AppSystemProp.REDIS_FAILED_JOB_RETENTION_DAYS),
+                REDIS_FAILED_JOB_RETENTION_MAX_COUNT: system.getNumberOrThrow(AppSystemProp.REDIS_FAILED_JOB_RETENTION_MAX_COUNT),
                 EDITION: system.getOrThrow(AppSystemProp.EDITION),
             }
         },

@@ -235,9 +235,6 @@ export const determineDefaultRoute = (
   if (checkAccess(Permission.READ_RUN)) {
     return authenticationSession.appendProjectRoutePrefix('/runs');
   }
-  if (checkAccess(Permission.READ_ISSUES)) {
-    return authenticationSession.appendProjectRoutePrefix('/issues');
-  }
   return authenticationSession.appendProjectRoutePrefix('/settings');
 };
 export const NEW_FLOW_QUERY_PARAM = 'newFlow';
@@ -329,15 +326,11 @@ export const routesThatRequireProjectId = {
   singleFlow: '/flows/:flowId',
   connections: '/connections',
   singleConnection: '/connections/:connectionId',
-  issues: '/issues',
-  singleIssue: '/issues/:issueId',
   tables: '/tables',
   singleTable: '/tables/:tableId',
   todos: '/todos',
   singleTodo: '/todos/:todoId',
   settings: '/settings',
-  mcps: '/mcps',
-  singleMcp: '/mcps/:mcpId',
   releases: '/releases',
   singleRelease: '/releases/:releaseId',
 };

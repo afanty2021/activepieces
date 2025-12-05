@@ -1,4 +1,4 @@
-import { FlowVersion } from '@activepieces/shared'
+import { FlowVersion, FlowVersionState, FlowVersionTemplate } from '@activepieces/shared'
 import { migrateBranchToRouter } from './migrate-v0-branch-to-router'
 import { migrateConnectionIds } from './migrate-v1-connection-ids'
 import { migrateAgentPieceV2 } from './migrate-v2-agent-piece'
@@ -7,6 +7,7 @@ import { migrateAgentPieceV4 } from './migrate-v4-agent-piece'
 import { migrateHttpToWebhookV5 } from './migrate-v5-http-to-webhook'
 import { migratePropertySettingsV6 } from './migrate-v6-property-settings'
 import { moveAgentsToFlowVerion } from './migrate-v7-agents-to-flow-version'
+import { cleanUpAgentTools } from './migrate-v8-agent-tools'
 
 export type Migration = {
     targetSchemaVersion: string | undefined
@@ -22,6 +23,7 @@ const migrations: Migration[] = [
     migrateHttpToWebhookV5,
     migratePropertySettingsV6,
     moveAgentsToFlowVerion,
+    cleanUpAgentTools,
 ] as const
 
 export const flowMigrations = {
@@ -33,4 +35,21 @@ export const flowMigrations = {
         }
         return flowVersion
     },
+}
+
+export const migrateFlowVersionTemplate = async (trigger: FlowVersion['trigger'], schemaVersion: FlowVersion['schemaVersion']): Promise<FlowVersionTemplate> => {
+    return flowMigrations.apply({
+        agentIds: [],
+        connectionIds: [],
+        created: new Date().toISOString(),
+        displayName: '',
+        flowId: '',
+        id: '',
+        updated: new Date().toISOString(),
+        updatedBy: '',
+        valid: false,
+        trigger,
+        state: FlowVersionState.DRAFT,
+        schemaVersion,
+    })
 }
