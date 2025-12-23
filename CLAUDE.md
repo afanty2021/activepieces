@@ -1,6 +1,7 @@
 # ActivePieces - 项目架构文档
 
 > **变更记录 (Changelog)**
+> - 2025-12-23 15:30:00 - 第六次增量更新：同步代码库最新状态，更新 Pieces 数量（280+ → 512+），补充 Agent 执行引擎迁移、MCP 架构重构、Pieces Context Version 系统、搜索遥测、Redis 缓存优化等新增功能，记录 20+ 个新增集成（Pollybot AI、Lightfunnels、Jira Cloud、QuickBooks 等）
 > - 2025-11-18 16:06:33 - 第五次增量更新：补充API路由、OAuth应用管理、功能开关系统、工作队列机制和前端组件架构的详细分析
 > - 2025-11-18 15:59:51 - 第四次增量更新：补充Webhook管理、用户管理、计费管理和引擎服务的深度分析
 > - 2025-11-18 15:45:17 - 第三次增量更新：补充AI集成管理和平台管理功能的深度分析
@@ -15,7 +16,7 @@ ActivePieces 是一个开源的 AI 驱动自动化平台，作为 Zapier 的替�
 - **类型安全的集成框架**：基于 TypeScript 的 npm 包式集成开发
 - **AI 优先设计**：内置 AI 集成，支持多种 AI 提供商
 - **企业级就绪**：支持自托管、品牌定制和权限控制
-- **MCP 工具包**：280+ 集成可作为 MCP 服务器与 LLM 交互
+- **庞大集成生态**：512+ 社区维护的第三方服务集成
 
 ## 架构总览
 
@@ -56,7 +57,7 @@ graph TD
     K --> K1["shared"];
     K --> K2["ui/embed-sdk"];
 
-    L --> L1["community (280+)"];
+    L --> L1["community (512+)"];
     L --> L2["framework"];
 
     F --> F1["src/index.ts"];
@@ -99,6 +100,7 @@ graph TD
 - **实时通信**：通过 WebSocket 与主进程通信
 - **变量处理**：支持复杂的变量解析和数据转换
 - **错误处理**：完善的错误捕获和报告机制
+- **Agent 执行**：AI Agent 执行功能已从 server 包迁移到 engine 包（2025-12-23 更新）
 
 #### 服务端 (`packages/server`)
 基于 Fastify 的模块化后端架构：
@@ -117,9 +119,20 @@ graph TD
 #### 集成生态 (`packages/pieces`)
 丰富的第三方服务集成：
 - **框架支持**：标准化的集成开发框架
-- **社区贡献**：280+ 社区维护的集成
-- **MCP 支持**：可作为 MCP 服务器使用
+- **社区贡献**：512+ 社区维护的集成（2025-12-23 更新）
+- **版本控制**：Pieces Context Version 系统（最小版本 0.73.0）
 - **热重载**：开发时实时预览功能
+
+#### 新增集成精选
+- **Pollybot AI**: AI 对话机器人集成
+- **Lightfunnels**: 营销漏斗自动化
+- **Jira Cloud**: Atlassian Jira 云服务
+- **QuickBooks**: Intuit 会计软件
+- **Zoho Campaigns**: 邮件营销自动化
+- **Cursor AI**: AI 编程助手
+- **CloudConvert**: 文件格式转换服务
+- **MemPool Space**: Bitcoin 内存池监控
+- 等 20+ 个新增集成
 
 ## 🔗 Webhook管理系统
 
@@ -2325,15 +2338,18 @@ npm run test:coverage
 
 ## AI 使用指引
 
-### MCP 集成
-所有 pieces 集成都可作为 MCP 服务器使用：
-```bash
-# 安装 ActivePieces MCP
-npm install -g @activepieces/mcp-server
+### MCP 架构重构（2025-12-23 更新）
+MCP 服务器功能已完成架构重构：
+- **架构迁移**：MCP 功能已从核心架构中移除并重新组织
+- **独立部署**：MCP 服务器现在作为独立组件部署
+- **集成支持**：512+ pieces 集成可通过 MCP 协议与 LLM 交互
 
-# 配置 Claude Desktop
-# 在 claude_desktop_config.json 中添加 MCP 服务器配置
-```
+### AI SDK 更新
+- **@ai-sdk/anthropic**: 2.0.3
+- **@ai-sdk/azure**: 2.0.12
+- **@ai-sdk/google**: 2.0.6
+- **@ai-sdk/openai**: 2.0.12
+- **@ai-sdk/replicate**: 1.0.3
 
 ### AI 代码生成
 - 使用 AI 辅助集成开发
@@ -2368,4 +2384,4 @@ npm install -g @activepieces/mcp-server
 
 ---
 
-*本文档由 AI 自动生成和维护，最后更新时间：2025-11-18 16:06:33*
+*本文档由 AI 自动生成和维护，最后更新时间：2025-12-23 15:30:00*
